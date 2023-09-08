@@ -88,6 +88,10 @@ def detect_document_bounding_box(image_path):
         # If the image does not have an alpha channel, create a binary mask based on the white background
         _, mask = cv2.threshold(image, 1, 255, cv2.THRESH_BINARY)
 
+    if len(mask.shape) > 2:
+        # Convert the image to grayscale
+        mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
