@@ -226,7 +226,7 @@ def fetch_transformed(image):
     # Transform and save the image
     transformed_image = transform_image(image, skewed_corners, a4_corners)
 
-    return transform_image
+    return transformed_image
 
 # function to read the text from image
 def fetch_ocr(image, lang='deu'):
