@@ -229,7 +229,7 @@ def fetch_transformed(image):
     return transform_image
 
 # function to read the text from image
-def ocr_core(image, lang='deu'):
+def fetch_ocr(image, lang='deu'):
     """
     This function will handle the core OCR processing of images.
     """
