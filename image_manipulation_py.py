@@ -29,6 +29,7 @@ def get_polygon_corners_path(image_path):
     if len(mask.shape) > 2:
         # Convert the image to grayscale
         mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -56,6 +57,7 @@ def get_polygon_corners(image):
     if len(mask.shape) > 2:
         # Convert the image to grayscale
         mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -157,7 +159,7 @@ def detect_document_bounding_box(image):
     if len(mask.shape) > 2:
         # Convert the image to grayscale
         mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
+
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
