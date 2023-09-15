@@ -2,6 +2,9 @@ from PIL import Image, ImageDraw
 import cv2
 import numpy as np
 import os
+import pytesseract
+
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
 def find_coeffs(source_coords, target_coords):
@@ -207,6 +210,32 @@ def process_all_images(test_image_folder, result_image_folder):
             # Transform and save the image
             transform_image_path(input_image_path, output_image_path, skewed_corners, a4_corners)
 
+def fetch_transformed(image):
+    # Get the corners of the skewed image
+    corners = get_polygon_corners(image)
+
+    # Coordinates of the corners of the skewed image (in the order: top-left, top-right, bottom-right, bottom-left)
+    skewed_corners = corners
+    skewed_corners = sort_corners(skewed_corners)
+
+    # Coordinates of the corners of the A4 size image (in the order: top-left, top-right, bottom-right, bottom-left)
+    # pixels at 300 DPI: 2480 x 3508 pixels
+    a4_corners = [(0, 0), (2480, 0), (2480, 3508), (0, 3508)]
+    a4_corners = sort_corners(a4_corners)
+
+    # Transform and save the image
+    transformed_image = transform_image(image, skewed_corners, a4_corners)
+
+    return transformed_image
+
+# function to read the text from image
+def fetch_ocr(image, lang='deu'):
+    """
+    This function will handle the core OCR processing of images.
+    """
+    # We'll use Pillow's Image class to open the image and pytesseract to detect the string in the image
+    text = pytesseract.image_to_string(image, lang=lang)
+    return text
 
 if __name__ == '__main__':
     test_image_folder = 'images/test_images'
