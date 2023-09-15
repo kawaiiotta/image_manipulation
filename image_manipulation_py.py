@@ -14,7 +14,7 @@ def find_coeffs(source_coords, target_coords):
     res = np.dot(np.linalg.inv(A.T * A) * A.T, B)
     return np.array(res).reshape(8)
 
-def get_polygon_corners(image_path):
+def get_polygon_corners_path(image_path):
     # Load the PNG image using OpenCV with the alpha channel (including transparency)
     image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
@@ -26,6 +26,36 @@ def get_polygon_corners(image_path):
         # If the image does not have an alpha channel, create a binary mask based on the white background
         _, mask = cv2.threshold(image, 1, 255, cv2.THRESH_BINARY)
 
+    if len(mask.shape) > 2:
+        # Convert the image to grayscale
+        mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Find contours in the mask
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Assuming the largest contour is the polygon we want to find the corners of
+    largest_contour = max(contours, key=cv2.contourArea)
+
+    # Approximate the polygon by reducing the number of points using the Ramer-Douglas-Peucker algorithm
+    epsilon = 0.02 * cv2.arcLength(largest_contour, True)
+    approx_corners = cv2.approxPolyDP(largest_contour, epsilon, True)
+
+    # Convert the approximated corners to a list of tuples (x, y)
+    corners = [tuple(point[0]) for point in approx_corners]
+
+    return corners
+
+def get_polygon_corners(image):
+    # If the image has an alpha channel, split the channels and use only the alpha channel as the mask
+    if image.shape[2] == 4:
+        _, _, _, alpha = cv2.split(image)
+        mask = alpha
+    else:
+        # If the image does not have an alpha channel, create a binary mask based on the white background
+        _, mask = cv2.threshold(image, 1, 255, cv2.THRESH_BINARY)
+
+    if len(mask.shape) > 2:
+        # Convert the image to grayscale
+        mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -56,7 +86,7 @@ def sort_corners(coordinates):
 
     return [top_left, bottom_left, bottom_right, top_right]
 
-def transform_image(input_image_path, output_image_path, corners, a4_corners):
+def transform_image_path(input_image_path, output_image_path, corners, a4_corners):
     # Use find_coeffs function to calculate the transformation matrix
     coeffs = find_coeffs(corners, a4_corners)
 
@@ -73,7 +103,20 @@ def transform_image(input_image_path, output_image_path, corners, a4_corners):
     # Save the transformed image to the output path
     transformed_image.save(output_image_path, format='PNG')
 
-def detect_document_bounding_box(image_path):
+def transform_image(image, corners, a4_corners):
+    # Use find_coeffs function to calculate the transformation matrix
+    coeffs = find_coeffs(corners, a4_corners)
+
+    # Determine the output size based on the sorted A4 dimensions
+    a4_width = max(a4_corners[1][0], a4_corners[2][0]) - min(a4_corners[0][0], a4_corners[3][0])
+    a4_height = max(a4_corners[2][1], a4_corners[3][1]) - min(a4_corners[0][1], a4_corners[1][1])
+
+    # Apply the affine transformation using the calculated coefficients and the determined output size
+    transformed_image = image.transform((a4_width, a4_height), Image.PERSPECTIVE, coeffs, Image.BICUBIC)
+
+    return transformed_image
+
+def detect_document_bounding_box_path(image_path):
     # Load the PNG image using OpenCV with the alpha channel (including transparency)
     image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
@@ -85,6 +128,36 @@ def detect_document_bounding_box(image_path):
         # If the image does not have an alpha channel, create a binary mask based on the white background
         _, mask = cv2.threshold(image, 1, 255, cv2.THRESH_BINARY)
 
+    if len(mask.shape) > 2:
+        # Convert the image to grayscale
+        mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # Find contours in the mask
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Assuming the largest contour is the document we want to find the bounding box of
+    largest_contour = max(contours, key=cv2.contourArea)
+
+    # Calculate the bounding box of the document
+    x, y, w, h = cv2.boundingRect(largest_contour)
+
+    # Return the coordinates of the bounding box
+    return [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
+
+def detect_document_bounding_box(image):
+
+    # If the image has an alpha channel, split the channels and use only the alpha channel as the mask
+    if image.shape[2] == 4:
+        _, _, _, alpha = cv2.split(image)
+        mask = alpha
+    else:
+        # If the image does not have an alpha channel, create a binary mask based on the white background
+        _, mask = cv2.threshold(image, 1, 255, cv2.THRESH_BINARY)
+
+    if len(mask.shape) > 2:
+        # Convert the image to grayscale
+        mask = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -118,7 +191,7 @@ def process_all_images(test_image_folder, result_image_folder):
             output_image_path = os.path.join(result_image_folder, output_image_name)
 
             # Get the corners of the skewed image
-            corners = get_polygon_corners(input_image_path)
+            corners = get_polygon_corners_path(input_image_path)
 
             # Coordinates of the corners of the skewed image (in the order: top-left, top-right, bottom-right, bottom-left)
             skewed_corners = corners
@@ -130,13 +203,14 @@ def process_all_images(test_image_folder, result_image_folder):
             a4_corners = sort_corners(a4_corners)
 
             # Transform and save the image
-            transform_image(input_image_path, output_image_path, skewed_corners, a4_corners)
+            transform_image_path(input_image_path, output_image_path, skewed_corners, a4_corners)
+
 
 if __name__ == '__main__':
     test_image_folder = 'images/test_images'
     result_image_folder = 'images/result_images'
 
-    bounding_box = detect_document_bounding_box(test_image_folder + '/test_image.png')
+    bounding_box = detect_document_bounding_box_path(test_image_folder + '/test_image.png')
     print("Bounding Box Coordinates:", bounding_box)
     aspect_ratio = calculate_aspect_ratio(bounding_box)
     print("Aspect Ratio:", aspect_ratio)
